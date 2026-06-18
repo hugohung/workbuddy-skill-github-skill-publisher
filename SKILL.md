@@ -3,7 +3,7 @@ name: github-skill-publisher
 description: |
   WorkBuddy Skill 发布管理工具 - 将本地 WorkBuddy Skill 发布到 GitHub、更新版本、查询已发布仓库、删除仓库。
   触发词：发布skill、上传skill到github、更新skill版本、删除skill仓库、查看我的skill仓库、publish skill。
-version: "1.1.0"
+version: "1.2.0"
 author: honghaoxiang
 ---
 
@@ -13,11 +13,102 @@ author: honghaoxiang
 
 ## 前置条件
 
-- 已安装 `gh` CLI（`brew install gh`）
-- 已登录 GitHub（`gh auth login`），当前账号为 **hugohung**
-- Skill 目录位于 `~/.workbuddy/skills/<skill-name>/`
+每次执行前，**必须先运行上传前自查清单**（见下方「上传前自查清单」章节）。
 
-每次执行前，先运行 `gh auth status` 确认登录状态。如果未登录，提示用户在终端执行 `gh auth login`。
+核心依赖只有一个：**`gh` CLI 已安装并已登录 `hugohung` 账号**。
+
+> ⚠️ WorkBuddy 内置了 `gh` CLI（路径见下方跨平台说明），通常不需要手动安装。
+> 如果内置 `gh` 未登录，执行 `gh auth login` 按提示完成浏览器授权即可。
+
+## 跨平台说明
+
+用户在两台设备上工作，执行前先检测当前平台：
+
+| 平台 | 内置 `gh` 路径 | 检测命令 |
+|------|----------------|----------|
+| **Windows（公司PC）** | `~/.workbuddy/bin/gh/bin/gh.exe` | `ls ~/.workbuddy/bin/gh/bin/gh.exe` |
+| **macOS（个人Mac）** | `~/.workbuddy/bin/gh/bin/gh` | `ls ~/.workbuddy/bin/gh/bin/gh` |
+
+**路径策略：**
+- 优先使用内置 `gh`（`~/.workbuddy/bin/gh/bin/gh*`），它已随 WorkBuddy 安装，且 token 由 WorkBuddy 管理
+- 如果内置 `gh` 存在但未登录，提示用户执行 `~/.workbuddy/bin/gh/bin/gh auth login`
+- 如果内置 `gh` 不存在，再尝试系统 `gh`（Windows: `gh` / macOS: `/usr/local/bin/gh`）
+
+**`~` 在不同平台的实际路径：**
+- Windows: `C:\Users\honghaoxiang`
+- macOS: `/Users/honghaoxiang`
+
+## 上传前自查清单 ⚠️ 必读
+
+每次上传/更新 skill 到 GitHub 之前，必须按顺序完成以下检查。**跳过任何一步都可能导致 push 失败。**
+
+### 第一步：确认 `gh` CLI 可用
+
+```bash
+# Windows
+~/.workbuddy/bin/gh/bin/gh.exe auth status
+
+# macOS
+~/.workbuddy/bin/gh/bin/gh auth status
+```
+
+预期输出：`Logged in to github.com account hugohung ...`
+
+如果未登录：执行 `~/.workbuddy/bin/gh/bin/gh.exe auth login`，选择 GitHub.com → HTTPS → 浏览器授权。
+
+### 第二步：确认 git credential helper 已配置
+
+这是最容易出问题的地方。`git push` 需要通过 credential helper 获取 token，如果没配置会报 `403` 或要求输入密码。
+
+**检查当前配置：**
+```bash
+git config --global --list | grep credential
+```
+
+**如果输出为空或不是 `gh auth git-credential`，执行以下命令配置：**
+
+```bash
+# Windows（Git Bash 中使用正斜杠路径）
+git config --global credential.helper '!"~/.workbuddy/bin/gh/bin/gh.exe" auth git-credential'
+
+# macOS
+git config --global credential.helper '!"~/.workbuddy/bin/gh/bin/gh" auth git-credential'
+```
+
+**验证配置是否生效：**
+```bash
+# Windows
+echo -e "protocol=https\nhost=github.com\n" | ~/.workbuddy/bin/gh/bin/gh.exe auth git-credential get
+
+# macOS
+echo "protocol=https\nhost=github.com\n" | ~/.workbuddy/bin/gh/bin/gh auth git-credential get
+```
+
+预期输出包含 `username=hugohung` 和 `password=gho_...`。
+
+### 第三步：确认 Skill 目录的 git remote 指向正确
+
+```bash
+cd ~/.workbuddy/skills/<skill-name>
+git remote -v
+```
+
+预期输出：`https://github.com/hugohung/workbuddy-skill-<name>.git`
+
+如果不是，重新设置：
+```bash
+git remote set-url origin https://github.com/hugohung/workbuddy-skill-<name>.git
+```
+
+### 第四步：先 pull 再 push（避免冲突）
+
+```bash
+cd ~/.workbuddy/skills/<skill-name>
+git pull --rebase origin main
+git push origin main
+```
+
+---
 
 ## 仓库命名规则
 
@@ -50,6 +141,10 @@ author: honghaoxiang
 创建仓库时直接使用此格式设置 `--description` 参数。如果已创建的仓库描述不符合此格式，使用 `gh repo edit` 更新。
 
 ## 操作流程
+
+### 0. 上传前必做（每次都要执行）
+
+**完整执行「上传前自查清单」（见上方），确认全部通过后再继续。**
 
 ### 1. 发布新 Skill（publish）
 
@@ -93,18 +188,20 @@ author: honghaoxiang
 1. 读取 `SKILL.md` 获取当前 version
 2. 询问用户新版本号（遵循 semver：patch/minor/major），或根据变更自动建议
 3. 更新 `SKILL.md` 中的 version 字段
-4. 提交并推送：
+4. **执行上传前自查清单**（见上方），确认 git credential 配置正确
+5. 提交并推送：
    ```bash
    cd ~/.workbuddy/skills/<skill-name>
    git add .
    git commit -m "<commit message>"
-   git push
+   git pull --rebase origin main   # 先拉取，避免冲突
+   git push origin main
    ```
-5. 创建新 Release：
+6. 创建新 Release：
    ```bash
    gh release create v<new-version> --repo hugohung/workbuddy-skill-<name> --title "v<new-version>" --notes "<更新说明>"
    ```
-6. 输出新的 zip 下载链接
+7. 输出新的 zip 下载链接
 
 ### 3. 查询已发布仓库（list）
 
@@ -116,7 +213,7 @@ author: honghaoxiang
    ```bash
    gh repo list hugohung --limit 50 --json name,description,url --jq '.[] | select(.name | startswith("workbuddy-skill-"))'
    ```
-2. 对比本地 `~/.worbuddy/skills/` 目录，标注哪些已发布、哪些未发布
+2. 对比本地 `~/.workbuddy/skills/` 目录，标注哪些已发布、哪些未发布
 3. 以表格形式展示：
 
 | 本地 Skill | GitHub 仓库 | 版本 | 状态 |
@@ -217,11 +314,13 @@ SOFTWARE.
 
 | 场景 | 处理方式 |
 |---|---|
-| `gh` 未安装 | 提示用户运行 `brew install gh` |
-| 未登录 GitHub | 提示用户运行 `gh auth login` |
+| `gh` 未安装 / 未找到 | 优先检查 `~/.workbuddy/bin/gh/bin/gh*`，再用系统 `gh` |
+| 未登录 GitHub | 提示用户执行 `gh auth login`（浏览器授权） |
+| **git push 报 403 / 要求输入密码** | **credential helper 未配置，按「上传前自查清单第二步」修复** |
 | 仓库已存在 | 切换到更新流程而非创建 |
-| git push 失败 | 检查 remote 是否正确，尝试重新设置 |
+| git push 失败（non-fast-forward） | 先 `git pull --rebase`，再 `git push` |
 | Release 标签已存在 | 提示用户使用新版本号 |
+| Mac 上 `gh` 路径不对 | 检查 `~/.workbuddy/bin/gh/bin/gh`，注意 macOS 可执行文件无 `.exe` 后缀 |
 
 ## 重要规则
 
@@ -230,3 +329,5 @@ SOFTWARE.
 - 每次发布/更新都应创建对应的 Release
 - 不要修改用户 SKILL.md 的核心内容，只更新 version 字段
 - 如果 Skill 目录已有 `.git` 和 remote，直接用现有配置 push
+- **`git push` 前必须先执行「上传前自查清单」，不可跳过**
+- **跨平台执行时，注意 `gh` 路径差异（Windows `.exe` / macOS 无后缀）**
