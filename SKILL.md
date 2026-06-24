@@ -3,7 +3,7 @@ name: github-skill-publisher
 description: |
   WorkBuddy Skill 发布管理工具 - 将本地 WorkBuddy Skill 发布到 GitHub、更新版本、查询已发布仓库、删除仓库。
   触发词：发布skill、上传skill到github、更新skill版本、删除skill仓库、查看我的skill仓库、publish skill。
-version: "1.2.0"
+version: "1.3.0"
 author: honghaoxiang
 ---
 
@@ -19,6 +19,99 @@ author: honghaoxiang
 
 > ⚠️ WorkBuddy 内置了 `gh` CLI（路径见下方跨平台说明），通常不需要手动安装。
 > 如果内置 `gh` 未登录，执行 `gh auth login` 按提示完成浏览器授权即可。
+
+## 环境自动识别（双机协作）
+
+用户有两台机器，agent 每次执行前必须先判断当前平台，再选对应路径和命令。
+
+### 判断当前平台
+
+```bash
+python -c "import platform; print(platform.system())"
+# 输出 Windows → 当前是公司Win PC
+# 输出 Darwin  → 当前是个人Mac
+```
+
+或直接检测特征路径：
+
+```bash
+# 如果存在 .exe → Windows
+ls ~/.workbuddy/bin/gh/bin/gh.exe 2>/dev/null && echo "Windows" || echo "macOS"
+```
+
+### 两台机器的环境差异
+
+| 项目 | Windows（公司PC）| macOS（个人Mac）|
+|------|-----------------|-----------------|
+| 用户名 | honghaoxiang | honghaoxiang |
+| HOME | `C:\Users\honghaoxiang` | `/Users/honghaoxiang` |
+| gh 路径 | `~/.workbuddy/bin/gh/bin/gh.exe` | `~/.workbuddy/bin/gh/bin/gh` |
+| git换行 | 注意 LF↔CRLF 问题，建议 `core.autocrlf=input` | 无问题 |
+| skills 目录 | `C:\Users\honghaoxiang\.workbuddy\skills\` | `/Users/honghaoxiang/.workbuddy/skills/` |
+
+### 跨平台 push 常见报错
+
+| 报错信息 | 原因 | 修复 |
+|---------|------|------|
+| `403 Forbidden` | credential helper 未配置 | 按「上传前自查清单第二步」配置 |
+| `Permission denied (publickey)` | 使用了 SSH 而非 HTTPS | 改用 HTTPS remote |
+| `LF will be replaced by CRLF` | Windows 行尾符警告 | 正常，不影响功能；可设置 `git config core.autocrlf input` |
+| `gh: command not found` | 系统 gh 未安装，但内置 gh 存在 | 使用绝对路径 `~/.workbuddy/bin/gh/bin/gh[.exe]` |
+| `non-fast-forward` | 本地落后远端 | 先 `git pull --rebase origin main`，再 push |
+| 冲突（rebase conflict）| 两台机器都做了修改 | 先 `git fetch && git reset --hard origin/main`，再重新应用本地改动 |
+
+---
+
+## Skill 同步清单（双机管理）
+
+用户的所有 skill 都托管在 `hugohung` GitHub 账号下，两台机器共用同一套 GitHub 仓库。
+
+### 从 GitHub 同步到本地（Mac→Win 或 Win→Mac 初始化）
+
+```bash
+# 在目标机器上，针对每个 skill 执行：
+GH_PATH="~/.workbuddy/bin/gh/bin/gh[.exe]"
+cd ~/.workbuddy/skills/<skill-name>
+# 如果已有 .git
+git pull origin main
+# 如果全新机器，先 clone：
+git clone https://github.com/hugohung/workbuddy-skill-<name>.git ~/.workbuddy/skills/<name>
+```
+
+### 我的 Skill 列表（所有需要管理的）
+
+| Skill 名称 | GitHub 仓库 | 最新版本 | 备注 |
+|---|---|---|---|
+| drama-topic-research | workbuddy-skill-drama-topic-research | v2.1.0 | 系统自动管理，author=honghaoxiang |
+| github-skill-publisher | workbuddy-skill-github-skill-publisher | v1.3.0 | 系统自动管理，author=honghaoxiang |
+| frame-anim-tool | workbuddy-skill-frame-anim-tool | v2.6.0 | agent_created，author=honghaoxiang |
+| jd-ai-short-drama-helper | workbuddy-skill-jd-ai-short-drama-helper | v1.0.0 | agent_created，author=honghaoxiang |
+| jd-ai-short-drama-libtv | workbuddy-skill-jd-ai-short-drama-libtv | v1.1.0 | agent_created，author=honghaoxiang |
+| jianying-rough-cut | workbuddy-skill-jianying-rough-cut | v1.0.0 | agent_created，author=honghaoxiang |
+| skill-intro-writer | workbuddy-skill-skill-intro-writer | v1.0.0 | agent_created，author=honghaoxiang |
+| lottie-anim-extension | lottie-anim-extension（⚠️ 非标命名）| v2.0.0 | agent_created，author=honghaoxiang |
+
+> ⚠️ `lottie-anim-extension` 的 GitHub 仓库名为 `lottie-anim-extension`（不含 `workbuddy-skill-` 前缀），是历史命名，后续可考虑迁移。
+
+### 哪些 Skill 需要上传到 GitHub？
+
+- `author: honghaoxiang` + `agent_created: true` → **我创建的，需要上传并维护**
+- `agent_created` 缺失或 `author` 非本人 → **系统内置或他人 skill，不需要 push**
+- 判断命令：`grep -l "author: honghaoxiang" ~/.workbuddy/skills/*/SKILL.md`
+
+### 哪些 Skill 需要从 GitHub 同步到本地？
+
+换机器或新装 WorkBuddy 时，运行以下命令检查缺少哪些 skill：
+
+```bash
+# 列出 GitHub 上我所有的 skill 仓库
+~/.workbuddy/bin/gh/bin/gh[.exe] repo list hugohung --limit 50 \
+  --json name,url --jq '.[] | select(.name | startswith("workbuddy-skill-")) | .name'
+```
+
+然后逐一确认本地 `~/.workbuddy/skills/` 下是否存在对应目录。
+
+---
 
 ## 跨平台说明
 
