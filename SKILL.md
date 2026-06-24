@@ -75,23 +75,23 @@ cd ~/.workbuddy/skills/<skill-name>
 # 如果已有 .git
 git pull origin main
 # 如果全新机器，先 clone：
-git clone https://github.com/hugohung/workbuddy-skill-<name>.git ~/.workbuddy/skills/<name>
+git clone https://github.com/hugohung/jd-<name>.git ~/.workbuddy/skills/<name>
 ```
 
 ### 我的 Skill 列表（所有需要管理的）
 
 | Skill 名称 | GitHub 仓库 | 最新版本 | 备注 |
 |---|---|---|---|
-| drama-topic-research | workbuddy-skill-drama-topic-research | v2.1.0 | 系统自动管理，author=honghaoxiang |
-| github-skill-publisher | workbuddy-skill-github-skill-publisher | v1.3.0 | 系统自动管理，author=honghaoxiang |
-| frame-anim-tool | workbuddy-skill-frame-anim-tool | v2.6.0 | agent_created，author=honghaoxiang |
-| jd-ai-short-drama-helper | workbuddy-skill-jd-ai-short-drama-helper | v1.0.0 | agent_created，author=honghaoxiang |
-| jd-ai-short-drama-libtv | workbuddy-skill-jd-ai-short-drama-libtv | v1.1.0 | agent_created，author=honghaoxiang |
-| jianying-rough-cut | workbuddy-skill-jianying-rough-cut | v1.0.0 | agent_created，author=honghaoxiang |
-| skill-intro-writer | workbuddy-skill-skill-intro-writer | v1.0.0 | agent_created，author=honghaoxiang |
-| lottie-anim-extension | lottie-anim-extension（⚠️ 非标命名）| v2.0.0 | agent_created，author=honghaoxiang |
+| drama-topic-research | jd-drama-topic-research | v2.1.0 | 系统自动管理，author=honghaoxiang |
+| github-skill-publisher | jd-github-skill-publisher | v1.3.0 | 系统自动管理，author=honghaoxiang |
+| frame-anim-tool | jd-frame-anim-tool | v2.6.0 | agent_created，author=honghaoxiang |
+| jd-ai-short-drama-helper | jd-ai-short-drama-helper | v1.0.0 | agent_created，author=honghaoxiang |
+| jd-ai-short-drama-libtv | jd-ai-short-drama-libtv | v1.1.0 | agent_created，author=honghaoxiang |
+| jianying-rough-cut | jd-jianying-rough-cut | v1.0.0 | agent_created，author=honghaoxiang |
+| skill-intro-writer | jd-skill-intro-writer | v1.0.0 | agent_created，author=honghaoxiang |
+| lottie-anim-extension | jd-lottie-anim-extension | v2.0.0 | agent_created，author=honghaoxiang |
 
-> ⚠️ `lottie-anim-extension` 的 GitHub 仓库名为 `lottie-anim-extension`（不含 `workbuddy-skill-` 前缀），是历史命名，后续可考虑迁移。
+> 所有 Skill 仓库已统一使用 `jd-` 前缀命名。
 
 ### 哪些 Skill 需要上传到 GitHub？
 
@@ -106,7 +106,7 @@ git clone https://github.com/hugohung/workbuddy-skill-<name>.git ~/.workbuddy/sk
 ```bash
 # 列出 GitHub 上我所有的 skill 仓库
 ~/.workbuddy/bin/gh/bin/gh[.exe] repo list hugohung --limit 50 \
-  --json name,url --jq '.[] | select(.name | startswith("workbuddy-skill-")) | .name'
+  --json name,url --jq '.[] | select(.name | startswith("jd-")) | .name'
 ```
 
 然后逐一确认本地 `~/.workbuddy/skills/` 下是否存在对应目录。
@@ -186,11 +186,11 @@ cd ~/.workbuddy/skills/<skill-name>
 git remote -v
 ```
 
-预期输出：`https://github.com/hugohung/workbuddy-skill-<name>.git`
+预期输出：`https://github.com/hugohung/jd-<name>.git`
 
 如果不是，重新设置：
 ```bash
-git remote set-url origin https://github.com/hugohung/workbuddy-skill-<name>.git
+git remote set-url origin https://github.com/hugohung/jd-<name>.git
 ```
 
 ### 第四步：先 pull 再 push（避免冲突）
@@ -205,9 +205,9 @@ git push origin main
 
 ## 仓库命名规则
 
-格式：`workbuddy-skill-<skill-name>`
+格式：`jd-<skill-name>`
 
-例如：`drama-topic-research` → `workbuddy-skill-drama-topic-research`
+例如：`drama-topic-research` → `jd-drama-topic-research`
 
 ## 仓库描述格式规则
 
@@ -247,7 +247,7 @@ git push origin main
 
 1. 读取 `~/.workbuddy/skills/<skill-name>/SKILL.md` 获取 skill 的 name、description、version
 2. 确认该 Skill 目录下有 `.git`，如果没有则 `git init`
-3. 检查 GitHub 上是否已存在同名仓库（`gh repo view hugohung/workbuddy-skill-<name>`）
+3. 检查 GitHub 上是否已存在同名仓库（`gh repo view hugohung/jd-<name>`）
    - 如果已存在 → 进入更新流程
 4. 在 Skill 目录下生成 `README.md`（如果不存在），模板见下方
 5. 在 Skill 目录下生成 `LICENSE`（MIT），如果不存在
@@ -262,15 +262,15 @@ git push origin main
    git add .
    git commit -m "feat: init <skill-name> v<version>"
    git branch -M main
-   gh repo create hugohung/workbuddy-skill-<name> --public --source=. --push --description "<emoji> <中文标题> | <中文功能说明>"
+   gh repo create hugohung/jd-<name> --public --source=. --push --description "<emoji> <中文标题> | <中文功能说明>"
    ```
 8. 创建 Release：
    ```bash
-   gh release create v<version> --repo hugohung/workbuddy-skill-<name> --title "v<version>" --notes "<description>"
+   gh release create v<version> --repo hugohung/jd-<name> --title "v<version>" --notes "<description>"
    ```
 9. 输出仓库地址和 zip 下载链接：
-   - 仓库：`https://github.com/hugohung/workbuddy-skill-<name>`
-   - 下载：`https://github.com/hugohung/workbuddy-skill-<name>/archive/refs/tags/v<version>.zip`
+   - 仓库：`https://github.com/hugohung/jd-<name>`
+   - 下载：`https://github.com/hugohung/jd-<name>/archive/refs/tags/v<version>.zip`
 
 ### 2. 更新已发布 Skill（update）
 
@@ -292,7 +292,7 @@ git push origin main
    ```
 6. 创建新 Release：
    ```bash
-   gh release create v<new-version> --repo hugohung/workbuddy-skill-<name> --title "v<new-version>" --notes "<更新说明>"
+   gh release create v<new-version> --repo hugohung/jd-<name> --title "v<new-version>" --notes "<更新说明>"
    ```
 7. 输出新的 zip 下载链接
 
@@ -304,14 +304,14 @@ git push origin main
 
 1. 运行：
    ```bash
-   gh repo list hugohung --limit 50 --json name,description,url --jq '.[] | select(.name | startswith("workbuddy-skill-"))'
+   gh repo list hugohung --limit 50 --json name,description,url --jq '.[] | select(.name | startswith("jd-"))'
    ```
 2. 对比本地 `~/.workbuddy/skills/` 目录，标注哪些已发布、哪些未发布
 3. 以表格形式展示：
 
 | 本地 Skill | GitHub 仓库 | 版本 | 状态 |
 |---|---|---|---|
-| drama-topic-research | workbuddy-skill-drama-topic-research | v2.0.0 | ✅ 已发布 |
+| drama-topic-research | jd-drama-topic-research | v2.0.0 | ✅ 已发布 |
 | png2apng | - | - | ⏳ 未发布 |
 
 ### 4. 删除仓库（delete）
@@ -364,7 +364,7 @@ git push origin main
 ### 从源码安装
 
 \`\`\`bash
-git clone https://github.com/hugohung/workbuddy-skill-<name>.git ~/.workbuddy/skills/<name>
+git clone https://github.com/hugohung/jd-<name>.git ~/.workbuddy/skills/<name>
 \`\`\`
 
 ## 使用方式
